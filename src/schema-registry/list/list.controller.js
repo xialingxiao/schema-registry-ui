@@ -40,6 +40,22 @@ angularAPP.controller('SubjectListCtrl', function ($scope, $rootScope, $log, $md
 
 });
 
+angularAPP.directive("schemaList", function($compile) {
+    return {
+       restrict: 'AE',
+       controller: 'SubjectListCtrl',
+       templateUrl: 'src/schema-registry/list/list.html',
+       compile: function (tElem, tAttrs) {
+         console.log(name + ': compile');
+         return {
+           pre: function (scope, iElem, iAttrs) {
+             scope.pageSize = iAttrs.schemaList;
+           }
+         }
+       }
+    };
+});
+
 //In small devices the list is hidden
 // $scope.$mdMedia = $mdMedia;
 // $scope.$watch(function () {

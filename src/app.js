@@ -1,6 +1,6 @@
 'use strict';
 
-var angularAPP = angular.module('angularAPP', [
+var angularAPP = angular.module('schemaRegistryModule', [
   'ui.ace',
   'angularSpinner',
   'angularUtils.directives.dirPagination',
@@ -45,20 +45,4 @@ angularAPP.filter('reverse', function() {
   return function(items) {
     return items.slice().reverse();
   };
-});
-
-angularAPP.directive("schemaList", function($compile) {
-    return {
-       restrict: 'AE',
-       controller: 'SubjectListCtrl',
-       templateUrl: 'src/schema-registry/list/list.html',
-       compile: function (tElem, tAttrs) {
-         console.log(name + ': compile');
-         return {
-           pre: function (scope, iElem, iAttrs) {
-             scope.pageSize = iAttrs.schemaList;
-           }
-         }
-       }
-    };
 });

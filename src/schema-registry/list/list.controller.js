@@ -2,6 +2,14 @@ angularAPP.controller('SubjectListCtrl', function ($scope, $rootScope, $log, $md
 
   $log.info("Starting schema-registry controller : list ( initializing subject cache )");
 
+//  $scope.pageSize = 5;
+//  console.log("christina " + $scope.pageSize)
+//  if($scope.items != undefined) {
+//    $scope.itemsPerPage = $scope.items;
+//  } else {
+//    $scope.itemsPerPage = 10;
+//  }
+
   /**
    * Watch the 'newCreated' and update the subject-cache accordingly
    */

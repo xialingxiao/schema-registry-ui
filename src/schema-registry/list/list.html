@@ -1,4 +1,7 @@
-<md-card ng-controller="SubjectListCtrl" md-theme="{{ showDarkTheme ? 'dark-grey' : 'default' }}">
+<md-card>
+
+  {{pageSize}}
+
   <md-toolbar style="background-color: #ededed; color:#000;">
     <div class="md-toolbar-tools">
       <h3>
@@ -21,7 +24,7 @@
 
     <md-list flex>
       <md-list-item class="md-list-item-text"
-                    dir-paginate="schema in allSchemas | orderBy:'-schema.length' | filter : search | itemsPerPage: 10"
+                    dir-paginate="schema in allSchemas | orderBy:'-schema.length' | filter : search | itemsPerPage: pageSize"
                     ng-href="/#/schema/{{schema.subjectName}}/version/{{schema.version}}"
                     style="margin:0;padding:0"
                     aria-label="{{schema.subjectName}}">
@@ -61,4 +64,5 @@
     </md-list>
     <dir-pagination-controls style="margin: 20px 20px;"></dir-pagination-controls>
   </md-content>
+  <!--<div ng-transclude></div>-->
 </md-card>

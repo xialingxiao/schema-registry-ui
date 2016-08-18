@@ -1,12 +1,27 @@
 angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $routeParams, $log, $location, SchemaRegistryFactory, UtilsFactory, toastFactory, Avro4ScalaFactory) {
 
-  $log.info("Starting schema-registry controller: view ( " + $routeParams.subject + "/" + $routeParams.version + " )");
+
+
+//   Handle params
+   if($routeParams.subject != undefined) {
+        $scope.params = {
+            subject : $routeParams.subject,
+            version : $routeParams.version
+        }
+   } else {
+        $scope.params = {
+            subject : 'STOCKS-value',
+            version : '1'
+        }
+   }
+
+  $log.info("Starting schema-registry controller: view ( " + $scope.params.subject + "/" + $scope.params.version + " )");
   toastFactory.hideToast();
 
   /**
    * At start-up - get the entire subject `History`
    */
-  SchemaRegistryFactory.getSubjectHistory($routeParams.subject).then(
+  SchemaRegistryFactory.getSubjectHistory($scope.params.subject).then(
     function success(data) {
       $scope.completeSubjectHistory = SchemaRegistryFactory.getSubjectHistoryDiff(data);
       //$log.warn("Diff is:");
@@ -17,16 +32,16 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $routeParams
   /**
    * At start-up do something more ...
    */
-  if ($routeParams.subject && $routeParams.version) {
-    var promise = SchemaRegistryFactory.getSubjectAtVersion($routeParams.subject, $routeParams.version);
+  if ( $scope.params.subject &&  $scope.params.version) {
+    var promise = SchemaRegistryFactory.getSubjectAtVersion( $scope.params.subject,  $scope.params.version);
     promise.then(function (selectedSubject) {
-      $log.info('Success fetching [' + $routeParams.subject + '/' + $routeParams.version + '] with MetaData');
+      $log.info('Success fetching [' +  $scope.params.subject + '/' +  $scope.params.version + '] with MetaData');
       $rootScope.subjectObject = selectedSubject;
       $rootScope.schema = selectedSubject.Schema.fields;
       $scope.aceString = angular.toJson(selectedSubject.Schema, true);
       $scope.aceStringOriginal = $scope.aceString;
       $scope.aceReady = true;
-      SchemaRegistryFactory.getSubjectsVersions($routeParams.subject).then(
+      SchemaRegistryFactory.getSubjectsVersions( $scope.params.subject).then(
         function success(allVersions) {
           var otherVersions = [];
           angular.forEach(allVersions, function (version) {
@@ -62,7 +77,7 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $routeParams
       if (UtilsFactory.IsJsonString($scope.aceString)) {
         $scope.aceBackgroundColor = "rgba(0, 128, 0, 0.04)";
         $log.debug("Edited schema is a valid json and is a augmented");
-        SchemaRegistryFactory.testSchemaCompatibility($routeParams.subject, $scope.aceString).then(
+        SchemaRegistryFactory.testSchemaCompatibility( $scope.params.subject, $scope.aceString).then(
           function success(result) {
             if (result) {
               $log.info("Schema is compatible");
@@ -88,13 +103,13 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $routeParams
   $scope.evolveAvroSchema = function () {
     if ($scope.aceString != $scope.aceStringOriginal &&
       UtilsFactory.IsJsonString($scope.aceString)) {
-      SchemaRegistryFactory.testSchemaCompatibility($routeParams.subject, $scope.aceString).then(
+      SchemaRegistryFactory.testSchemaCompatibility( $scope.params.subject, $scope.aceString).then(
         function success(result) {
-          var latestSchema = SchemaRegistryFactory.getLatestSubjectFromCache($routeParams.subject);
+          var latestSchema = SchemaRegistryFactory.getLatestSubjectFromCache( $scope.params.subject);
           $log.warn("peiler ");
           $log.warn(latestSchema);
           var latestID = latestSchema.id;
-          SchemaRegistryFactory.registerNewSchema($routeParams.subject, $scope.aceString).then(
+          SchemaRegistryFactory.registerNewSchema( $scope.params.subject, $scope.aceString).then(
             function success(schemaId) {
               $log.info("Latest schema ID was : " + latestID);
               $log.info("New    schema ID is  : " + schemaId);

@@ -46,3 +46,19 @@ angularAPP.filter('reverse', function() {
     return items.slice().reverse();
   };
 });
+
+angularAPP.directive("schemaList", function($compile) {
+    return {
+       restrict: 'AE',
+       controller: 'SubjectListCtrl',
+       templateUrl: 'src/schema-registry/list/list.html',
+       compile: function (tElem, tAttrs) {
+         console.log(name + ': compile');
+         return {
+           pre: function (scope, iElem, iAttrs) {
+             scope.pageSize = iAttrs.schemaList;
+           }
+         }
+       }
+    };
+});

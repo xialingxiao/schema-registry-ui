@@ -1,7 +1,7 @@
 angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $route, $routeParams, $log, $location, SchemaRegistryFactory, UtilsFactory, toastFactory, Avro4ScalaFactory) {
-
   $log.info("Starting schema-registry controller: view ( " + $routeParams.subject + "/" + $routeParams.version + " )");
-  toastFactory.hideToast();
+  $rootScope.newEvolve = false;
+  // toastFactory.hideToast();
 
   /**
    * At start-up - get the entire subject `History`
@@ -10,7 +10,6 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $route, $rou
     function success(data) {
       $scope.completeSubjectHistory = SchemaRegistryFactory.getSubjectHistoryDiff(data);
       //$log.warn("Diff is:");
-      //$log.warn(JSON.stringify($scope.completeSubjectHistory));
     }
   );
 
@@ -23,7 +22,8 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $route, $rou
       $log.info('Success fetching [' + $routeParams.subject + '/' + $routeParams.version + '] with MetaData');
       $rootScope.subjectObject = selectedSubject;
       $rootScope.schema = selectedSubject.Schema.fields;
-      $scope.aceString = angular.toJson(selectedSubject.Schema, true);
+      // $scope.aceString = angular.toJson(selectedSubject.Schema, true);
+      $scope.aceString = JSON.stringify(selectedSubject.Schema, null, 4);
       $scope.aceStringOriginal = $scope.aceString;
       $scope.aceReady = true;
       SchemaRegistryFactory.getSubjectsVersions($routeParams.subject).then(
@@ -71,16 +71,18 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $route, $rou
               $scope.isAvroUpdatedAndCompatible = true;
             } else {
               $scope.aceBackgroundColor = "rgba(255, 255, 0, 0.10)";
-              toastFactory.showLongToast("This schema is incompatible with the latest version");
+              toastFactory.showSimpleToast("This schema is incompatible with the latest version");
             }
           },
           function failure() {
+            $scope.aceBackgroundColor = "rgba(255, 255, 0, 0.10)";
+            toastFactory.showSimpleToast("Invalid Avro");
             $log.error("Could not test compatibility");
           }
         );
       } else {
         $scope.aceBackgroundColor = "rgba(255, 255, 0, 0.10)";
-        toastFactory.showLongToast("Invalid Avro");
+        toastFactory.showSimpleToast("Invalid JSON");
       }
     }
   };
@@ -117,7 +119,7 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $route, $rou
       );
     } else {
       $scope.aceBackgroundColor = "rgba(255, 255, 0, 0.10)";
-      toastFactory.showLongToast("Invalid Avro");
+      toastFactory.showSimpleToast("Invalid Avro");
     }
   };
 
@@ -136,7 +138,7 @@ angularAPP.controller('SubjectsCtrl', function ($rootScope, $scope, $route, $rou
   $scope.toggleEditor = function () {
     $scope.isAvroAceEditable = !$scope.isAvroAceEditable;
     if ($scope.isAvroAceEditable) {
-      toastFactory.showLongToast("You can now edit the schema");
+      toastFactory.showSimpleToast("You can now edit the schema");
       $scope.aceBackgroundColor = "rgba(0, 128, 0, 0.04)";
     } else {
       $scope.aceBackgroundColor = "white";

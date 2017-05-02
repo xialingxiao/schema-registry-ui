@@ -4,7 +4,7 @@
  *
  * @author antonios@landoop.com
  */
-angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $location, $q, $log, UtilsFactory) {
+angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $location, $q, $log, UtilsFactory, env) {
 
   /**
    * Get subjects
@@ -12,7 +12,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
    */
   function getSubjects() {
 
-    var url = SCHEMA_REGISTRY + '/subjects/';
+    var url = env.SCHEMA_REGISTRY() + '/subjects/';
     $log.debug("  curl -X GET " + url);
     var start = new Date().getTime();
 
@@ -37,7 +37,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
    */
   function getSubjectsVersions(subjectName) {
 
-    var url = SCHEMA_REGISTRY + '/subjects/' + subjectName + '/versions/';
+    var url = env.SCHEMA_REGISTRY() + '/subjects/' + subjectName + '/versions/';
     $log.debug("  curl -X GET " + url);
     var start = new Date().getTime();
 
@@ -64,7 +64,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
    */
   function getSubjectAtVersion(subjectName, version) {
 
-    var url = SCHEMA_REGISTRY + '/subjects/' + subjectName + '/versions/' + version;
+    var url = env.SCHEMA_REGISTRY() + '/subjects/' + subjectName + '/versions/' + version;
     $log.debug("  curl -X GET " + url);
 
     var deferred = $q.defer();
@@ -84,7 +84,20 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
     return deferred.promise;
 
   }
-
+    function getAllSchemas(cache) {
+      var i;
+      var allSchemasCache = []
+      angular.forEach(cache, function (schema) {
+        for (i = 1; i <= schema.version; i++) {
+          getSubjectAtVersion(schema.subjectName, i).then(function (selectedSubject) {
+          allSchemasCache.push(selectedSubject)
+          //$rootScope.downloadFile += '\n echo >>>' + selectedSubject.subject +'.'+ selectedSubject.version + '.json <<< \n' + schema.schema + ' \n \n EOF';
+          })
+        }
+      });
+      $rootScope.allSchemasCache = allSchemasCache;
+    return allSchemasCache
+  }
   /**
    * Register a new schema under the specified subject. If successfully registered, this returns the unique identifier of this schema in the registry.
    * @see http://docs.confluent.io/3.0.0/schema-registry/docs/api.html#post--subjects-(string- subject)-versions
@@ -96,7 +109,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
 
     var postSchemaRegistration = {
       method: 'POST',
-      url: SCHEMA_REGISTRY + '/subjects/' + subjectName + "/versions",
+      url: env.SCHEMA_REGISTRY() + '/subjects/' + subjectName + "/versions",
       data: '{"schema":"' + newSchema.replace(/\n/g, " ").replace(/\s\s+/g, ' ').replace(/"/g, "\\\"") + '"}' + "'",
       dataType: 'json',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}
@@ -136,7 +149,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
 
     var postSchemaExists = {
       method: 'POST',
-      url: SCHEMA_REGISTRY + '/subjects/' + subjectName,
+      url: env.SCHEMA_REGISTRY() + '/subjects/' + subjectName,
       data: '{"schema":"' + subjectInformation.replace(/\n/g, " ").replace(/\s\s+/g, ' ').replace(/"/g, "\\\"") + '"}' + "'",
       dataType: 'json',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}
@@ -177,7 +190,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
 
     var postCompatibility = {
       method: 'POST',
-      url: SCHEMA_REGISTRY + '/compatibility/subjects/' + subjectName + "/versions/latest",
+      url: env.SCHEMA_REGISTRY() + '/compatibility/subjects/' + subjectName + "/versions/latest",
       data: '{"schema":"' + subjectInformation.replace(/\n/g, " ").replace(/\s\s+/g, ' ').replace(/"/g, "\\\"") + '"}' + "'",
       dataType: 'json',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}
@@ -214,17 +227,17 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
 
     var deferred = $q.defer();
 
-    if (["NONE", "FULL", "FORWARD", "BACKWARD"].instanceOf(compatibilityLevel) != -1) {
+    if (["NONE", "FULL", "FORWARD", "BACKWARD", "FULL_TRANSITIVE", "FORWARD_TRANSITIVE", "BACKWARD_TRANSITIVE"].indexOf(compatibilityLevel) != -1) {
 
-      var postConfig = {
-        method: 'POST',
-        url: SCHEMA_REGISTRY + '/config',
+      var putConfig = {
+        method: 'PUT',
+        url: env.SCHEMA_REGISTRY() + '/config',
         data: '{"compatibility":"' + compatibilityLevel + '"}' + "'",
         dataType: 'json',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}
       };
 
-      $http(postConfig)
+      $http(putConfig)
         .success(function (data) {
           $log.info("Success in changing global schema-registry compatibility " + JSON.stringify(data));
           deferred.resolve(data.compatibility)
@@ -260,7 +273,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
   function getGlobalConfig() {
 
     var deferred = $q.defer();
-    var url = SCHEMA_REGISTRY + '/config';
+    var url = env.SCHEMA_REGISTRY() + '/config';
     $log.debug("  curl -X GET " + url);
     var start = new Date().getTime();
     $http.get(url)
@@ -276,6 +289,26 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
 
   }
 
+  function getSubjectConfig(subjectName) {
+    var deferred = $q.defer();
+    var url = env.SCHEMA_REGISTRY() + '/config/' + subjectName;
+    $log.debug("  curl -X GET " + url);
+    var start = new Date().getTime();
+    $http.get(url)
+      .success(function (data) {
+        $log.debug("  curl -X GET " + url + " => in [ " + ((new Date().getTime()) - start) + "] msec");
+        deferred.resolve(data)
+      })
+      .error(function (data, status) {
+      if (status == 404) {
+      $log.warn('No compatibility level is set for '+ subjectName +'. Global compatibility level is applied');
+      } else
+        deferred.reject("Get global config rejection : " + data + " " + status)
+      });
+    return deferred.promise;
+
+  }
+
   /**
    * Update compatibility level for the specified subject
    * @see http://docs.confluent.io/3.0.0/schema-registry/docs/api.html#put--config-(string- subject)
@@ -284,17 +317,17 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
 
     var deferred = $q.defer();
 
-    if (["NONE", "FULL", "FORWARD", "BACKWARD"].instanceOf(newCompatibilityLevel) != -1) {
+    if (["NONE", "FULL", "FORWARD", "BACKWARD", "FULL_TRANSITIVE", "FORWARD_TRANSITIVE", "BACKWARD_TRANSITIVE"].indexOf(newCompatibilityLevel) != -1) {
 
-      var postConfig = {
-        method: 'POST',
-        url: SCHEMA_REGISTRY + '/config/' + subjectName,
+      var putConfig = {
+        method: 'PUT',
+        url: env.SCHEMA_REGISTRY() + '/config/' + subjectName,
         data: '{"compatibility":"' + newCompatibilityLevel + '"}' + "'",
         dataType: 'json',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}
       };
 
-      $http(postConfig)
+      $http(putConfig)
         .success(function (data) {
           $log.info("Success in changing subject [ " + subjectName + " ] compatibility " + JSON.stringify(data));
           deferred.resolve(data.compatibility)
@@ -315,7 +348,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
         });
 
     } else {
-      $log.warn("Compatibility level:" + compatibilityLevel + " is not supported");
+      $log.warn("Compatibility level:" + newCompatibilityLevel + " is not supported");
       deferred.reject();
     }
 
@@ -377,6 +410,17 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
       return getGlobalConfig();
     },
 
+    getSubjectConfig: function (subjectName) {
+      return getSubjectConfig(subjectName);
+    },
+
+    putConfig: function (config) {
+      return putConfig(config);
+    },
+    updateSubjectCompatibility: function (subjectName, newCompatibilityLevel) {
+      return updateSubjectCompatibility(subjectName, newCompatibilityLevel);
+    },
+
     // Proxy in function
     testSchemaCompatibility: function (subjectName, subjectInformation) {
       return testSchemaCompatibility(subjectName, subjectInformation);
@@ -396,6 +440,10 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
     getLatestSubjectFromCache: function (subjectName) {
       return getLatestFromCache(subjectName);
     },
+    // Proxy in function
+    getAllSchemas: function (schemas) {
+      return getAllSchemas(schemas);
+    },
 
     /**
      * GETs all subject-names and then GETs the /versions/latest of each one
@@ -413,7 +461,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
           // 2. Get full details of subject's final versions
           var urlFetchLatestCalls = [];
           angular.forEach(allSubjectNames, function (subject) {
-            urlFetchLatestCalls.push($http.get(SCHEMA_REGISTRY + '/subjects/' + subject + '/versions/latest'));
+            urlFetchLatestCalls.push($http.get(env.SCHEMA_REGISTRY() + '/subjects/' + subject + '/versions/latest'));
           });
           $q.all(urlFetchLatestCalls).then(function (latestSchemas) {
             CACHE = []; // Clean up existing cache - to replace with new one
@@ -430,6 +478,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
             });
             $log.debug("  pipeline : get-latest-subjects-refresh-cache in [ " + (new Date().getTime() - start) + " ] msec");
             $rootScope.showSpinner = false;
+            $rootScope.Cache = CACHE;
             deferred.resolve(CACHE);
           });
         });
@@ -437,7 +486,6 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
       return deferred.promise;
 
     },
-
     /**
      * Get one subject at a particular version
      */
@@ -493,7 +541,7 @@ angularAPP.factory('SchemaRegistryFactory', function ($rootScope, $http, $locati
             if (subjectFromCache != undefined) {
               completeSubjectHistory.push(subjectFromCache);
             } else {
-              urlCalls.push($http.get(SCHEMA_REGISTRY + '/subjects/' + subjectName + '/versions/' + version));
+              urlCalls.push($http.get(env.SCHEMA_REGISTRY() + '/subjects/' + subjectName + '/versions/' + version));
             }
           });
           // Get all missing versions and add them to cache
